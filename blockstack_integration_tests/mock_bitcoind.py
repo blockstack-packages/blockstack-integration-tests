@@ -53,6 +53,7 @@ sys.path.insert(0, current_dir)
 import blockstack
 from blockstack.lib import *
 import virtualchain
+import virtualchain.lib.blockchain.bitcoin as bitcoin_driver
 import bitcoin
 
 # global singleton
@@ -490,6 +491,8 @@ def connect_mock_bitcoind( mock_opts, reset=False ):
 def connect_bitcoind( mock_opts ):
     return connect_mock_bitcoind( mock_opts )
 
+def connect_blockchain( mock_opts ):
+    return connect_mock_bitcoind( mock_opts )
 
 def get_mock_bitcoind():
     """
@@ -731,8 +734,55 @@ def make_worker_env( mock_bitcoind_mod, mock_bitcoind_save_path ):
     
     worker_env = {
         # use mock_bitcoind to connect to bitcoind (but it has to import it in order to use it)
-        "VIRTUALCHAIN_MOD_CONNECT_BLOCKCHAIN": mock_bitcoind_mod.__file__,
+        "VIRTUALCHAIN_MOD_BLOCKCHAIN": mock_bitcoind_mod.__file__,
         "MOCK_BITCOIND_SAVE_PATH": mock_bitcoind_save_path
     }
 
     return worker_env
+
+
+def connect_blockchain( mock_opts ):
+    """
+    Required for virtualchain
+    """
+    return connect_bitcoind( mock_opts )
+
+
+def get_blockchain_config( path ):
+    """
+    required by virtualchain; uses the bitcoin driver
+    """
+    return bitcoin_driver.get_blockchain_config( path )
+
+
+def get_blockchain_height( client ):
+    """
+    required by virtualchain; uses the bitcoin driver
+    """
+    return client.getblockcount()
+
+
+def get_virtualchain_transactions( *args, **kw ):
+    """
+    required by virtualchain; uses the bitcoin driver
+    """
+    return bitcoin_driver.get_virtualchain_transactions( *args, **kw )
+
+
+def getblockhash( *args, **kw ):
+    """
+    required by virtualchain
+    """
+    return bitcoin_driver.transactions.getblockhash( *args, **kw )
+
+def getblock( *args, **kw ):
+    """
+    required by virtualchain
+    """
+    return bitcoin_driver.transactions.getblock( *args, **kw )
+
+def getrawtransaction( *args, **kw ):
+    """
+    required by virtualchain
+    """
+    return bitcoin_driver.transactions.getrawtransaction( *args, **kw )
