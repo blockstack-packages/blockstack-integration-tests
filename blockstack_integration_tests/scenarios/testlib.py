@@ -85,7 +85,7 @@ class TestAPIProxy(object):
             "metadata": client_config['metadata'],
             'path': client_path
         }
-        self.spv_headers_path = utxo_opts['spv_headers_path']
+        self.blockchain_headers_path = utxo_opts['blockchain_headers_path']
 
         if not os.path.exists(self.conf['metadata']):
             os.makedirs(self.conf['metadata'], 0700)
