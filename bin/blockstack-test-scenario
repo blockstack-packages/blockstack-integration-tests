@@ -46,8 +46,8 @@ save_file = @MOCK_SAVE_FILE@
 rpc_port = %s
 max_subsidy = 64000000
 subsidization_keys = ./blockstack-subsidization-keys.txt
-tx_broadcaster = mock_utxo
-utxo_provider = mock_utxo
+blockchain_tx_sender = mock_utxo
+blockchain_service = mock_utxo
 backup_frequency = 3
 backup_max_age = 30
 blockchain_proxy = True
@@ -231,11 +231,11 @@ def run_scenario( scenario, config_file, client_config_file, interactive=False, 
         worker_env["PYTHONPATH"] = os.environ["PYTHONPATH"]
 
     # virtualchain defaults...
-    virtualchain.setup_virtualchain( impl=blockstack_state_engine, bitcoind_connection_factory=mock_bitcoind.connect_mock_bitcoind, index_worker_env=worker_env )
+    virtualchain.setup_virtualchain( impl=blockstack_state_engine, blockchain_connection_factory=mock_bitcoind.connect_mock_bitcoind, index_worker_env=worker_env )
 
     # set up blockstack
     # NOTE: utxo_opts encodes the mock-bitcoind options 
-    blockstack_opts, bitcoin_opts, utxo_opts = blockstack.lib.configure( config_file=config_file, interactive=False)
+    blockstack_opts, bitcoin_opts, utxo_opts, _, _ = blockstack.lib.configure( config_file=config_file, interactive=False)
    
     # override multiprocessing options to ensure single-process behavior 
     utxo_opts['multiprocessing_num_procs'] = 1 
@@ -243,40 +243,45 @@ def run_scenario( scenario, config_file, client_config_file, interactive=False, 
 
     # pass along extra arguments
     utxo_opts['save_file'] = mock_bitcoind_save_path
+    utxo_opts['blockchain'] = 'blockstack_integration_tests.mock_bitcoind'
+    utxo_opts['blockchain_server'] = '127.0.0.1'
+    utxo_opts['blockchain_port'] = 8332
 
     print ""
     print "blockstack opts"
     print json.dumps( blockstack_opts, indent=4 )
 
     print ""
-    print "bitcoin opts"
+    print "blockchain opts"
     print json.dumps( bitcoin_opts, indent=4 )
 
     print ""
-    print "UTXO opts"
+    print "blockchain service opts"
     print json.dumps( utxo_opts, indent=4 )
 
     # save headers as well 
-    utxo_opts['spv_headers_path'] = spv_headers_path
-    with open( utxo_opts['spv_headers_path'], "w" ) as f:
+    utxo_opts['blockchain_headers_path'] = spv_headers_path
+    with open( utxo_opts['blockchain_headers_path'], "w" ) as f:
         # write out "initial" headers, up to the first block
         empty_header = ("00" * 81).decode('hex')
         for i in xrange(0, blockstack.FIRST_BLOCK_MAINNET ): 
             f.write( empty_header )
 
-    print "mock bitcoind save path: %s" % mock_bitcoind_save_path
-    print "mock bitcoind SPV headers: %s" % spv_headers_path
+    print "mock blockchain chainstate save path: %s" % mock_bitcoind_save_path
+    print "mock blockchain headers: %s" % spv_headers_path
 
     blockstackd.set_blockstack_opts( blockstack_opts )
-    blockstackd.set_bitcoin_opts( bitcoin_opts )
-    blockstackd.set_utxo_opts( utxo_opts )
+    blockstackd.set_blockchain_opts( "bitcoin", bitcoin_opts )
+    blockstackd.set_service_opts( "bitcoin", utxo_opts )
 
     db = blockstackd.get_db_state(disposition=blockstackd.DISPOSITION_RW)
     bitcoind = mock_bitcoind.connect_mock_bitcoind( utxo_opts )
 
     sync_virtualchain_upcall = lambda: virtualchain.sync_virtualchain( utxo_opts, bitcoind.getblockcount(), db )
-    mock_utxo = blockstack.lib.connect_utxo_provider( utxo_opts )
+    mock_utxo = blockstack.blockstackd.get_service_provider_client( "bitcoin", utxo_opts )
     working_dir = virtualchain.get_working_dir()
+
+    print "working_dir: %s" % working_dir
 
     # set up test environment
     testlib.set_utxo_opts( utxo_opts )
