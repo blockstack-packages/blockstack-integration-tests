@@ -58,7 +58,7 @@ class MockUTXOProvider(object):
                self.broadcast_transaction( tx, utxos_only=True )
 
 
-    def get_unspents( self, address ):
+    def get_inputs( self, address ):
         """
         Get UTXOs for an address.
         Returns a list of transaction outputs.
@@ -151,11 +151,11 @@ class MockUTXOProvider(object):
         return resp
 
 
-def get_unspents(address, blockchain_client):
+def get_inputs(address, blockchain_client):
     """
     Get the unspent outputs for an address.
     """
-    return blockchain_client.get_unspents( address )
+    return blockchain_client.get_inputs( address )
 
 
 def broadcast_transaction(hex_tx, blockchain_client):
